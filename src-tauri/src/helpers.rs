@@ -134,3 +134,26 @@ pub fn copy_files(src: impl AsRef<Path>, dest: impl AsRef<Path>) -> crate::error
 
     Ok(())
 }
+
+pub fn copy_file(src: impl AsRef<Path>, dest: impl AsRef<Path>) -> crate::errors::Result<()> {
+    if let Err(e) = fs::copy(src.as_ref(), dest.as_ref()) {
+        match e.raw_os_error() {
+            Some(ERROR_ACCESS_DENIED) => {
+                return Err(crate::errors::LauncherError::AccessDenied(format!(
+                    "Unable to copy file from \"{}\" to \"{}\"",
+                    src.as_ref().display(),
+                    dest.as_ref().display()
+                )))
+            }
+            Some(ERROR_FILE_BEING_USED) => {
+                info!(
+                    "Unable to copy \"{}\" because the destination file is being used",
+                    src.as_ref().display()
+                );
+            }
+            _ => return Err(crate::errors::LauncherError::from(e)),
+        }
+    }
+
+    Ok(())
+}

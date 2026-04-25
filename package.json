@@ -13,7 +13,7 @@
     "preview": "vite preview",
     "tauri": "tauri",
     "start": "tauri dev",
-    "release": "tauri build -t i686-pc-windows-msvc",
+    "release": "tauri build -t x86_64-pc-windows-msvc",
     "installer": "cd src-tauri/nsis && makensis installer_manual.nsi"
   },
   "dependencies": {

@@ -44,6 +44,7 @@
     "bundle": {
       "active": true,
       "targets": "all",
+      "resources": ["extra/d3dx9_25.dll"],
       "identifier": "mp.open.launcher",
       "icon": [
         "icons/32x32.png",
@@ -58,7 +59,7 @@
         "digestAlgorithm": null,
         "nsis": {
           "template": "./nsis/installer.nsi",
-          "installMode": "perMachine"
+          "installMode": "currentUser"
         },
         "signCommand": null,
         "timestampUrl": null,

@@ -12,6 +12,11 @@ jobs:
   build-omp-launcher:
     name: Windows build
     runs-on: windows-latest
+    env:
+      WINDOWS_TARGET: x86_64-pc-windows-msvc
+      SIGNING_TIMESTAMP_URL: http://timestamp.digicert.com
+      WINDOWS_CERT_BASE64: ${{ secrets.WINDOWS_CERT_BASE64 }}
+      WINDOWS_CERT_PASSWORD: ${{ secrets.WINDOWS_CERT_PASSWORD }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,11 +32,50 @@ jobs:
       - name: Install frontend dependencies
         run: yarn install
 
-      - name: Install rust i686-pc-windows-msvc target
-        run: rustup target add i686-pc-windows-msvc
+      - name: Install rust Windows target
+        run: rustup target add ${{ env.WINDOWS_TARGET }}
 
       - name: Build project
         run: yarn release
+
+      - name: Sign Windows binaries
+        if: ${{ env.WINDOWS_CERT_BASE64 != '' && env.WINDOWS_CERT_PASSWORD != '' }}
+        shell: pwsh
+        run: |
+          $certificatePath = Join-Path $env:RUNNER_TEMP "openmp-launcher-signing.pfx"
+          [System.IO.File]::WriteAllBytes(
+            $certificatePath,
+            [System.Convert]::FromBase64String($env:WINDOWS_CERT_BASE64)
+          )
+
+          $installerPath = Get-ChildItem `
+            -Path "src-tauri/target/$env:WINDOWS_TARGET/release/bundle/nsis/*_x64-setup.exe" `
+            | Select-Object -First 1 -ExpandProperty FullName
+
+          if (-not $installerPath) {
+            throw "Unable to locate the NSIS installer output"
+          }
+
+          $filesToSign = @(
+            "src-tauri/target/$env:WINDOWS_TARGET/release/omp-launcher.exe",
+            $installerPath
+          )
+
+          foreach ($file in $filesToSign) {
+            & signtool sign `
+              /fd SHA256 `
+              /f $certificatePath `
+              /p $env:WINDOWS_CERT_PASSWORD `
+              /tr $env:SIGNING_TIMESTAMP_URL `
+              /td SHA256 `
+              $file
+
+            if ($LASTEXITCODE -ne 0) {
+              throw "signtool failed for $file"
+            }
+          }
+
+          Remove-Item -LiteralPath $certificatePath -Force
 
       - name: Generate artifact name
         id: vars
@@ -46,12 +90,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.vars.outputs.artifact_name }}
-          path: src-tauri/target/i686-pc-windows-msvc/release/omp-launcher.exe
+          path: src-tauri/target/x86_64-pc-windows-msvc/release/omp-launcher.exe
           if-no-files-found: error
 
       - name: Upload setup artifacts
         uses: actions/upload-artifact@v4
         with:
           name: ${{ steps.vars.outputs.setup_artifact_name }}
-          path: src-tauri/target/i686-pc-windows-msvc/release/bundle/nsis/omp-launcher_1.6.3_x86-setup.exe
+          path: src-tauri/target/x86_64-pc-windows-msvc/release/bundle/nsis/*_x64-setup.exe
           if-no-files-found: error

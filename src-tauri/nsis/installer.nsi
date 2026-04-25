@@ -16,23 +16,22 @@ Unicode true
 ${StrCase}
 ${StrLoc}
 
-!define MANUFACTURER "open"
+!define MANUFACTURER "open.mp"
 !define PRODUCTNAME "Open Multiplayer Launcher"
 !define VERSION "1.6.3"
 !define VERSIONWITHBUILD "1.6.3.0"
 !define SHORTDESCRIPTION "Open Multiplayer Launcher"
-!define INSTALLMODE "perMachine"
+!define INSTALLMODE "currentUser"
 !define LICENSE ""
 !define INSTALLERICON ""
 !define SIDEBARIMAGE ""
 !define HEADERIMAGE ""
 !define MAINBINARYNAME "omp-launcher"
 !define MAINBINARYSRCPATH "${__FILEDIR__}\..\..\omp-launcher.exe"
-!define CUSTOMDXFILEPATH "${__FILEDIR__}\..\..\..\..\..\extra\d3dx9_25.dll"
 !define BUNDLEID "mp.open.launcher"
-!define COPYRIGHT ""
+!define COPYRIGHT "Open Multiplayer Team"
 !define OUTFILE "nsis-output.exe"
-!define ARCH "x86"
+!define ARCH "x64"
 !define PLUGINSPATH ""
 !define ALLOWDOWNGRADES "true"
 !define DISPLAYLANGUAGESELECTOR "false"
@@ -542,11 +541,6 @@ Section Install
 
   ; Copy main executable
   File "${MAINBINARYSRCPATH}"
-
-  ; Copy d3dx9_25.dll
-  SetOutPath $SYSDIR
-  File "${CUSTOMDXFILEPATH}"
-  SetOutPath $INSTDIR
 
   ; Copy resources
 

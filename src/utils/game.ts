@@ -53,9 +53,12 @@ const isFileAvailableInGTASADir = async (file: ResourceInfo) => {
 };
 
 export const checkResourceFilesAvailability = async () => {
+  const { gtasaPath } = useSettings.getState();
   const checks = Array.from(validFileChecksums.values())
     .filter((file) => file.requiredInGameDir)
     .map((file) => isFileAvailableInGTASADir(file));
+
+  checks.push(fs.exists(await path.join(gtasaPath, "d3dx9_25.dll")));
 
   return Promise.all(checks);
 };

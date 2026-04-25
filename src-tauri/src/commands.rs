@@ -4,6 +4,10 @@ use md5::compute;
 use sevenz_rust::decompress_file;
 use std::fs::File;
 use std::io::Read;
+use std::path::{Path, PathBuf};
+use tauri::api::path::resource_dir;
+
+const D3DX9_RUNTIME_DLL: &str = "d3dx9_25.dll";
 
 #[tauri::command]
 pub async fn inject(
@@ -143,8 +147,27 @@ pub fn extract_7z(path: String, output_path: String) -> std::result::Result<(), 
 }
 
 #[tauri::command]
-pub fn copy_files_to_gtasa(src: String, gtasa_dir: String) -> std::result::Result<(), String> {
-    match helpers::copy_files(&src, &gtasa_dir) {
+pub fn copy_files_to_gtasa(
+    app_handle: tauri::AppHandle,
+    src: String,
+    gtasa_dir: String,
+) -> std::result::Result<(), String> {
+    let result = (|| -> crate::errors::Result<()> {
+        helpers::copy_files(&src, &gtasa_dir)?;
+
+        let support_file = resolve_support_file(&app_handle, D3DX9_RUNTIME_DLL).ok_or_else(|| {
+            LauncherError::InternalError(format!(
+                "Missing bundled runtime dependency '{}'",
+                D3DX9_RUNTIME_DLL
+            ))
+        })?;
+
+        let destination = Path::new(&gtasa_dir).join(D3DX9_RUNTIME_DLL);
+        helpers::copy_file(&support_file, destination)?;
+        Ok(())
+    })();
+
+    match result {
         Ok(_) => Ok(()),
         Err(e) => {
             log::warn!("{}", e);
@@ -156,6 +179,26 @@ pub fn copy_files_to_gtasa(src: String, gtasa_dir: String) -> std::result::Resul
             }
         }
     }
+}
+
+fn resolve_support_file(app_handle: &tauri::AppHandle, file_name: &str) -> Option<PathBuf> {
+    let mut candidates = Vec::new();
+
+    if let Some(resource_path) = resource_dir(&app_handle.config()) {
+        candidates.push(resource_path.join(file_name));
+        candidates.push(resource_path.join("extra").join(file_name));
+    }
+
+    if let Ok(current_exe) = std::env::current_exe() {
+        if let Some(parent) = current_exe.parent() {
+            candidates.push(parent.join(file_name));
+            candidates.push(parent.join("resources").join(file_name));
+        }
+    }
+
+    candidates.push(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("extra").join(file_name));
+
+    candidates.into_iter().find(|candidate| candidate.exists())
 }
 
 #[tauri::command]
